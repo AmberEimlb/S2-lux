@@ -1,0 +1,484 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vocabulary Flashcards</title>
+    <!-- SheetJS to read Excel files -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- Google Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+
+    <style>
+        :root {
+            --primary: #4F46E5;
+            --primary-hover: #4338CA;
+            --bg-color: #F8FAFC;
+            --card-bg: #FFFFFF;
+            --text-main: #0F172A;
+            --text-muted: #64748B;
+            --border-color: #E2E8F0;
+            --success: #10B981;
+            --danger: #EF4444;
+        }
+
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            padding: 24px;
+            min-height: 100vh;
+        }
+
+
+        .container {
+            max-width: 950px;
+            margin: 0 auto;
+        }
+
+
+        header {
+            background: var(--card-bg);
+            padding: 24px;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            margin-bottom: 24px;
+            border: 1px solid var(--border-color);
+        }
+
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
+
+        h1 {
+            font-size: 1.5rem;
+        }
+
+
+        .scoreboard {
+            display: flex;
+            gap: 12px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+
+        .score-box {
+            padding: 6px 14px;
+            border-radius: 20px;
+            border: 1px solid var(--border-color);
+            background: #F1F5F9;
+        }
+
+
+        .score-correct {
+            background: #ECFDF5;
+            color: #065F46;
+            border-color: #A7F3D0;
+        }
+
+
+        .score-wrong {
+            background: #FEF2F2;
+            color: #991B1B;
+            border-color: #FCA5A5;
+        }
+
+
+        p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+        }
+
+
+        .controls {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+
+        .file-upload {
+            position: relative;
+            display: inline-block;
+        }
+
+
+        .file-upload input[type="file"] {
+            position: absolute;
+            left: 0; top: 0;
+            opacity: 0;
+            width: 100%; height: 100%;
+            cursor: pointer;
+        }
+
+
+        .btn {
+            background-color: var(--primary);
+            color: white;
+            padding: 10px 18px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+
+        .btn:hover {
+            background-color: var(--primary-hover);
+        }
+
+
+        .btn-secondary {
+            background-color: #FFFFFF;
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+        }
+
+
+        .btn-secondary:hover {
+            background-color: #F1F5F9;
+        }
+
+
+        select {
+            padding: 10px 16px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            background-color: white;
+            font-family: inherit;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-main);
+            outline: none;
+            cursor: pointer;
+        }
+
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+            gap: 16px;
+        }
+
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            transition: transform 0.15s ease, border-color 0.2s;
+        }
+
+
+        .card.status-correct {
+            border: 2px solid var(--success);
+            background: #F0FDF4;
+        }
+
+
+        .card.status-wrong {
+            border: 2px solid var(--danger);
+            background: #FEF2F2;
+        }
+
+
+        .prompt-side {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--primary);
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+
+        .answer-side {
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--text-main);
+            padding: 10px;
+            border-radius: 8px;
+            background-color: #F1F5F9;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+
+
+        .answer-side.hidden {
+            background-color: #E2E8F0;
+            color: transparent;
+            text-shadow: 0 0 10px rgba(15, 23, 42, 0.5);
+            position: relative;
+        }
+
+
+        .answer-side.hidden::after {
+            content: "Click to reveal";
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            color: var(--text-muted);
+            text-shadow: none;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+
+        .card-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 4px;
+        }
+
+
+        .action-btn {
+            flex: 1;
+            padding: 6px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background: white;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+
+        .btn-check:hover { background: #DCFCE7; color: #15803D; }
+        .btn-cross:hover { background: #FEE2E2; color: #B91C1C; }
+
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            background: white;
+            border-radius: 16px;
+            border: 2px dashed var(--border-color);
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+
+
+    <div class="container">
+        <header>
+            <div class="header-top">
+                <h1>🎴 Vocabulary Flashcards</h1>
+                <div class="scoreboard">
+                    <div class="score-box score-correct">Mastered: <span id="correctCount">0</span></div>
+                    <div class="score-box score-wrong">Review: <span id="wrongCount">0</span></div>
+                </div>
+            </div>
+            <p>Automatically loads <b>vocab.xlsx</b> from GitHub, or upload a custom Excel file below.</p>
+            
+            <div class="controls">
+                <div class="file-upload">
+                    <button class="btn">📁 Load Custom File</button>
+                    <input type="file" id="fileInput" accept=".xlsx, .xls, .csv" />
+                </div>
+
+
+                <select id="practiceMode">
+                    <option value="guess-english">Mode: Show Foreign → Guess English</option>
+                    <option value="guess-foreign">Mode: Show English → Guess Foreign</option>
+                </select>
+
+
+                <button class="btn btn-secondary" id="shuffleBtn">🔀 Shuffle Cards</button>
+            </div>
+        </header>
+
+
+        <main id="cardsContainer">
+            <div class="empty-state">
+                Loading vocabulary...
+            </div>
+        </main>
+    </div>
+
+
+    <script>
+        let vocabData = [];
+        let scores = {};
+
+
+        // Automatic fetch when the page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            fetch('vocab.xlsx')
+                .then(response => {
+                    if (response.ok) return response.arrayBuffer();
+                    throw new Error('No local vocab.xlsx file found');
+                })
+                .then(data => parseAndLoadExcel(data))
+                .catch(err => {
+                    console.log(err.message);
+                    document.getElementById('cardsContainer').innerHTML = 
+                        '<div class="empty-state">Please upload an Excel file or add a "vocab.xlsx" file to your GitHub repository.</div>';
+                });
+        });
+
+
+        // Manual file upload listener
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                parseAndLoadExcel(data);
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+
+        // Parse Excel Array Buffer
+        function parseAndLoadExcel(data) {
+            const workbook = XLSX.read(data, { type: 'array' });
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+            
+            vocabData = [];
+            scores = {};
+
+
+            rows.forEach((row, index) => {
+                if (row[0] && row[1]) {
+                    vocabData.push({
+                        id: index,
+                        foreign: String(row[0]).trim(),
+                        english: String(row[1]).trim()
+                    });
+                }
+            });
+
+
+            renderCards();
+        }
+
+
+        document.getElementById('practiceMode').addEventListener('change', renderCards);
+
+
+        // Shuffle Array
+        document.getElementById('shuffleBtn').addEventListener('click', () => {
+            for (let i = vocabData.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [vocabData[i], vocabData[j]] = [vocabData[j], vocabData[i]];
+            }
+            renderCards();
+        });
+
+
+        function renderCards() {
+            const container = document.getElementById('cardsContainer');
+            const mode = document.getElementById('practiceMode').value;
+
+
+            if (vocabData.length === 0) {
+                container.innerHTML = '<div class="empty-state">No vocabulary found in file. Ensure columns 1 & 2 contain text.</div>';
+                return;
+            }
+
+
+            container.className = 'cards-grid';
+            container.innerHTML = '';
+
+
+            vocabData.forEach((item) => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                if (scores[item.id] === 'correct') card.classList.add('status-correct');
+                if (scores[item.id] === 'wrong') card.classList.add('status-wrong');
+
+
+                const promptText = mode === 'guess-english' ? item.foreign : item.english;
+                const answerText = mode === 'guess-english' ? item.english : item.foreign;
+
+
+                card.innerHTML = `
+                    <div class="prompt-side">${promptText}</div>
+                    <div class="answer-side hidden">${answerText}</div>
+                    <div class="card-actions">
+                        <button class="action-btn btn-check">✔ Got it</button>
+                        <button class="action-btn btn-cross">✖ Need practice</button>
+                    </div>
+                `;
+
+
+                const answerDiv = card.querySelector('.answer-side');
+                answerDiv.addEventListener('click', () => {
+                    answerDiv.classList.toggle('hidden');
+                });
+
+
+                card.querySelector('.btn-check').addEventListener('click', () => {
+                    scores[item.id] = 'correct';
+                    updateScoreboard();
+                    renderCards();
+                });
+
+
+                card.querySelector('.btn-cross').addEventListener('click', () => {
+                    scores[item.id] = 'wrong';
+                    updateScoreboard();
+                    renderCards();
+                });
+
+
+                container.appendChild(card);
+            });
+
+
+            updateScoreboard();
+        }
+
+
+        function updateScoreboard() {
+            let correct = 0;
+            let wrong = 0;
+
+
+            Object.values(scores).forEach(status => {
+                if (status === 'correct') correct++;
+                if (status === 'wrong') wrong++;
+            });
+
+
+            document.getElementById('correctCount').textContent = correct;
+            document.getElementById('wrongCount').textContent = wrong;
+        }
+    </script>
+</body>
+</html>
